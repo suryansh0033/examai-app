@@ -47,11 +47,11 @@ If MIXED NUMERICAL + THEORY (Physics, Chemistry, Electronics, Engineering subjec
 - Analyze the syllabus topics individually. Some topics will be numerical, some will be conceptual.
 - For numerical topics (formulas, laws with calculations, circuit problems, reactions with quantities): generate calculation-based problems with step-by-step answers.
 - For theory topics (definitions, principles, mechanisms, explanations): generate conceptual questions with clear descriptive answers.
-- Split the 20 questions proportionally — if the syllabus is 60% numerical topics, roughly 12 questions should be numerical and 8 theory. Match the balance to the syllabus content.
+- - Split the ${questionCount} questions proportionally
 - Do NOT force every question to be numerical just because the subject has some maths in it.
 
 If PURE THEORY (History, Biology concepts, Law, Literature, Management):
-- All 20 questions should be conceptual, descriptive, or application-based.
+- - All ${questionCount} questions should be conceptual
 - Answers should explain clearly in 2-4 sentences matching the exam type format.
 - No numerical problems.
 
@@ -66,7 +66,9 @@ Return ONLY a valid JSON array. No explanation, no markdown, no backticks, no ex
   }
 ]
 
-Generate all 20 questions now.
+IMPORTANT: Count your questions before finalizing. The JSON array MUST contain exactly ${questionCount} objects. Not 18. Not 19. Exactly ${questionCount}.
+
+Generate all ${questionCount} questions now.
 `;
 
   // Call Groq and wait for the response
@@ -78,7 +80,7 @@ Generate all 20 questions now.
         content: prompt,
       },
     ],
-    temperature: 0.7,
+    temperature: 0.85,
     max_tokens: 4000,
   });
 
