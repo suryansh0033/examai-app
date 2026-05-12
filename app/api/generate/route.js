@@ -27,20 +27,21 @@ const questionCount =
   "Coding questions only": `Generate ALL ${questionCount} as coding problems. Each question should describe a problem to solve with expected input/output examples. In the answer field, provide a clean solution with a one-line explanation.`,
   "Short answer": `Generate ALL ${questionCount} as short answer questions. Each answer must be 2-3 lines maximum.`,
   "Subjective": `Generate ALL ${questionCount} as subjective questions requiring detailed explanations. Answers should be thorough, covering key concepts, examples, and implications.`,
+  "Numericals only": `Generate ALL ${questionCount} as numerical problems with real numbers and calculations. Every question must require the student to calculate, solve, or derive something. Show clear step-by-step working in the answer with the final answer clearly stated.`,
 };
 
   // Build the prompt we send to Groq
   const prompt = `
 You are an expert exam question predictor for college students.
 
-A student has ${hours} hour(s) left before their exam. Exam type: ${examType}. ${formatInstructions[examType]}
-
+A student has ${hours} hour(s) left before their exam. You MUST generate EXACTLY ${questionCount} questions — no more, no less. Count them before responding.
 First, silently analyze the syllabus below and decide which category it falls into:
 
 If MATHEMATICS (pure maths, numerical methods, statistics):
-- All 20 questions must be numerical problems requiring calculation, derivation, or equation solving.
+- All ${questionCount} questions must be numerical problems requiring calculation, derivation, or equation solving.
 - No definitions or conceptual questions at all.
 - Every answer must show step-by-step working with the final answer clearly stated.
+- If the exam type is "Numericals only", strictly override everything and generate only numerical calculation problems regardless of subject.
 
 If MIXED NUMERICAL + THEORY (Physics, Chemistry, Electronics, Engineering subjects):
 - Analyze the syllabus topics individually. Some topics will be numerical, some will be conceptual.
@@ -108,6 +109,24 @@ const sanitized = cleanJson
 // Parse Groq's JSON reply into a JavaScript array
 const questions = JSON.parse(sanitized);
 
-  // Send the questions back to the front-end
-  return Response.json({ questions });
+// If model returned wrong count, trim excess or retry
+if (questions.length < questionCount) {
+  console.warn(`Model returned ${questions.length} questions instead of ${questionCount}. Retrying...`);
+  continue; // try next key or retry
+}
+
+// If model returned too many, trim to exact count
+const questions = JSON.parse(sanitized);
+
+// If model returned wrong count, trim excess or retry
+if (questions.length < questionCount) {
+  console.warn(`Model returned ${questions.length} questions instead of ${questionCount}. Retrying...`);
+  continue; // try next key or retry
+}
+
+// If model returned too many, trim to exact count
+const trimmed = questions.slice(0, questionCount);
+
+console.log(`Success with GROQ_API_KEY_${i + 1}`);
+return Response.json({ questions: trimmed });
 }
