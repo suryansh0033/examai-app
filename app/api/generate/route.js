@@ -43,34 +43,27 @@ export async function POST(request) {
     }
 
     const sectionDescriptions = sections.map((sec, i) => {
-      const sectionLabel = String.fromCharCode(65 + i);
-      return `Section ${sectionLabel}: ${sec.count} ${sec.type} question(s) of ${sec.marks} mark(s) each`;
+      const label = String.fromCharCode(65 + i);
+      return `Section ${label}: ${sec.count} ${sec.type} question(s), ${sec.marks} mark(s) each`;
     }).join("\n");
 
     const totalQuestions = sections.reduce((sum, sec) => sum + Number(sec.count), 0);
     const totalMarks = sections.reduce((sum, sec) => sum + Number(sec.count) * Number(sec.marks), 0);
 
-    prompt = `You are an exam paper setter. Syllabus: ${syllabus}
+    // ✅ Lean prompt — plain numbered questions, no answers, no JSON schema
+    prompt = `You are an exam paper setter. Generate a university exam paper based on this syllabus:
+${syllabus}
 
-If syllabus is gibberish, reply only: INVALID_SYLLABUS
-
-Generate exactly ${totalQuestions} questions for this paper structure:
+Paper structure (Total: ${totalQuestions} questions, ${totalMarks} marks):
 ${sectionDescriptions}
 
 Rules:
-- Add [Unit - Topic] before each question
-- MCQ: include 4 options labeled A) B) C) D) in the question text
-- Short Answer: clear concise question only
-- Long Answer: detailed question only
-- Numerical: include all required values/data in the question
-- Coding: problem statement with sample input/output in the question
-- Spread questions across all syllabus units, no repeats
-- Do NOT include any answers
-
-Return ONLY a JSON array, no markdown:
-[{"section":"A","type":"MCQ","marks":1,"question":"[Unit 1 - Topic] Question?\nA) ...\nB) ...\nC) ...\nD) ..."}]
-
-Generate all ${totalQuestions} objects now.`;
+- Output ONLY section headings and numbered questions. No answers, no explanations, no extra text.
+- Format each section as: "SECTION A" then numbered questions like "1. Question text"
+- For MCQs: include options (a) (b) (c) (d) inside the question
+- For Numericals: include all required values in the question
+- Spread questions across syllabus topics. No repeats.
+- Do NOT include any answers or hints.`;
 
   // ── IMPORTANT QUESTIONS MODE ──
   } else {
@@ -154,21 +147,37 @@ Generate all ${questionCount} questions now.`;
         model: "llama-3.1-8b-instant",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.85,
-        max_tokens: mode === "paper" ? 8000 : 4000,
+        // ✅ Paper mode returns plain text, so 3000 tokens is plenty
+        max_tokens: mode === "paper" ? 3000 : 4000,
       });
 
-      let rawText = completion.choices[0].message.content;
-      rawText = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
+      const rawText = completion.choices[0].message.content?.trim() ?? "";
 
-      if (rawText.includes("INVALID_SYLLABUS")) {
+      // ── PAPER MODE: return plain text directly ──
+      if (mode === "paper") {
+        if (rawText.includes("INVALID_SYLLABUS")) {
+          return Response.json(
+            { error: "⚠️ Please enter a valid syllabus with real topics. We couldn't detect any recognizable subject matter." },
+            { status: 400 }
+          );
+        }
+        console.log(`Success with GROQ_API_KEY_${i + 1} — paper mode`);
+        // Return as { paperText: "..." } so the frontend can render it directly
+        return Response.json({ paperText: rawText });
+      }
+
+      // ── IMPORTANT QUESTIONS MODE: parse JSON as before ──
+      let cleaned = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
+
+      if (cleaned.includes("INVALID_SYLLABUS")) {
         return Response.json(
           { error: "⚠️ Please enter a valid syllabus with real topics. We couldn't detect any recognizable subject matter." },
           { status: 400 }
         );
       }
 
-      const start = rawText.indexOf("[");
-      const end = rawText.lastIndexOf("]");
+      const start = cleaned.indexOf("[");
+      const end = cleaned.lastIndexOf("]");
 
       if (start === -1 || end === -1) {
         return Response.json(
@@ -177,15 +186,9 @@ Generate all ${questionCount} questions now.`;
         );
       }
 
-      const cleanJson = rawText.slice(start, end + 1);
+      const cleanJson = cleaned.slice(start, end + 1);
       const sanitized = cleanJson.replace(/\\(?!["\\/bfnrtu])/g, "\\\\");
       const questions = JSON.parse(sanitized);
-
-      if (mode === "paper") {
-        const totalNeeded = sections.reduce((sum, sec) => sum + Number(sec.count), 0);
-        console.log(`Success with GROQ_API_KEY_${i + 1} — got ${questions.length} questions`);
-        return Response.json({ questions: questions.slice(0, totalNeeded) });
-      }
 
       const questionCount =
         hours === "1" ? 10 :
@@ -245,13 +248,16 @@ Generate all ${questionCount} questions now.`;
         continue;
       }
 
+      // ✅ Only match genuine context-length errors — NOT generic "token" mentions
+      //    which appear in unrelated Groq errors and cause false positives.
+      const errorStr = JSON.stringify(error).toLowerCase();
       const isTooLong =
         error?.status === 413 ||
-        error?.message?.toLowerCase().includes("context") ||
-        error?.message?.toLowerCase().includes("too long") ||
-        error?.message?.toLowerCase().includes("token") ||
-        JSON.stringify(error).toLowerCase().includes("context_length") ||
-        JSON.stringify(error).toLowerCase().includes("request_too_large");
+        errorStr.includes("context_length_exceeded") ||
+        errorStr.includes("request_too_large") ||
+        errorStr.includes("maximum context length") ||
+        errorStr.includes("reduce the length") ||
+        (errorStr.includes("too long") && !errorStr.includes("rate limit"));
 
       if (isTooLong) {
         return Response.json(

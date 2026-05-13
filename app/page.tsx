@@ -29,6 +29,7 @@ export default function Home() {
   const [hours, setHours] = useState("2");
   const [examType, setExamType] = useState("Mixed");
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [paperText, setPaperText] = useState(""); // ✅ plain text for paper mode
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -73,6 +74,7 @@ export default function Home() {
     setLoading(true);
     setError("");
     setQuestions([]);
+    setPaperText(""); // ✅ reset paper text too
 
     if (syllabus.length > 2000) return;
 
@@ -113,7 +115,12 @@ export default function Home() {
         return;
       }
 
-      setQuestions(data.questions);
+      // ✅ Paper mode: use plain text. Important mode: use questions array.
+      if (mode === "paper") {
+        setPaperText(data.paperText || "");
+      } else {
+        setQuestions(data.questions);
+      }
     } catch (err) {
       setError("Network error. Please check your connection and try again.");
     } finally {
@@ -123,13 +130,6 @@ export default function Home() {
 
   const questionCount =
     hours === "1" ? 10 : hours === "8" ? 30 : 20;
-
-  const paperSections = sections.map((sec, i) => {
-    const label = String.fromCharCode(65 + i);
-    const start = sections.slice(0, i).reduce((sum, s) => sum + s.count, 0);
-    const sectionQs = questions.slice(start, start + sec.count);
-    return { label, sec, sectionQs };
-  });
 
   return (
     <main className="min-h-screen bg-[#0f0f0f] text-white px-4 py-10 font-sans">
@@ -147,7 +147,7 @@ export default function Home() {
       {/* ── Mode Toggle ── */}
       <div className="max-w-xl mx-auto mb-6 flex gap-3">
         <button
-          onClick={() => { setMode("important"); setQuestions([]); setError(""); }}
+          onClick={() => { setMode("important"); setQuestions([]); setPaperText(""); setError(""); }}
           className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all duration-200 border ${
             mode === "important"
               ? "bg-amber-400 text-black border-amber-400"
@@ -157,7 +157,7 @@ export default function Home() {
           ⭐ Important Questions
         </button>
         <button
-          onClick={() => { setMode("paper"); setQuestions([]); setError(""); }}
+          onClick={() => { setMode("paper"); setQuestions([]); setPaperText(""); setError(""); }}
           className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all duration-200 border ${
             mode === "paper"
               ? "bg-amber-400 text-black border-amber-400"
@@ -320,7 +320,7 @@ export default function Home() {
               <span className="text-xl font-black text-amber-400">{totalMarks}</span>
             </div>
 
-            {mode === "paper" && sections.reduce((s, sec) => s + sec.count, 0) > 20 && (
+            {sections.reduce((s, sec) => s + sec.count, 0) > 20 && (
               <p className="mt-3 text-xs text-amber-400 text-center">
                 ⚠️ Large papers may generate slowly. Keep total questions under 20 for best results.
               </p>
@@ -393,7 +393,8 @@ export default function Home() {
       )}
 
       {/* ── QUESTION PAPER OUTPUT ── */}
-      {questions.length > 0 && mode === "paper" && (
+      {/* ✅ Renders plain text from AI — no JSON parsing, no answer buttons, no section slicing */}
+      {paperText && mode === "paper" && (
         <div className="max-w-xl mx-auto mt-10">
 
           {/* Paper header */}
@@ -404,7 +405,10 @@ export default function Home() {
             <p className="text-gray-400 text-sm mt-1">
               Total Marks: <span className="text-white font-bold">{totalMarks}</span>
               &nbsp;·&nbsp;
-              Total Questions: <span className="text-white font-bold">{questions.length}</span>
+              Total Questions:{" "}
+              <span className="text-white font-bold">
+                {sections.reduce((s, sec) => s + sec.count, 0)}
+              </span>
             </p>
             <div className="border-t border-white/10 mt-4 pt-4 flex flex-wrap justify-center gap-4 text-xs text-gray-500">
               {sections.map((sec, i) => (
@@ -415,42 +419,14 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Sections */}
-          {paperSections.map(({ label, sec, sectionQs }) => (
-            <div key={label} className="mb-8">
-              <div className="flex items-center gap-3 mb-4">
-                <span className="text-lg font-black text-amber-400">
-                  SECTION {label}
-                </span>
-                <span className="text-xs text-gray-500">
-                  {sec.type} · {sec.count} Questions · {sec.marks} Mark{sec.marks !== 1 ? "s" : ""} Each
-                </span>
-              </div>
+          {/* ✅ Plain text paper — whitespace-pre-wrap preserves section headings and numbering */}
+          <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 shadow-md">
+            <pre className="text-white text-sm font-sans leading-relaxed whitespace-pre-wrap">
+              {paperText}
+            </pre>
+          </div>
 
-              <div className="flex flex-col gap-3">
-                {sectionQs.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-5 shadow-md"
-                  >
-                    <div className="flex items-start justify-between mb-1">
-                      <p className="text-sm font-bold text-amber-400">
-                        Q{idx + 1}.
-                      </p>
-                      <span className="text-xs text-gray-600 bg-white/5 px-2 py-0.5 rounded-full">
-                        [{sec.marks} mark{sec.marks !== 1 ? "s" : ""}]
-                      </span>
-                    </div>
-                    <p className="text-white text-sm font-medium leading-relaxed whitespace-pre-line">
-                      {item.question}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-
-          <p className="text-center text-gray-600 text-xs mt-4 mb-4">
+          <p className="text-center text-gray-600 text-xs mt-6 mb-4">
             Generated by CramAI · Good luck on your exam! 🍀
           </p>
         </div>
