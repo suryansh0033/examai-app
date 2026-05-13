@@ -282,7 +282,11 @@ Generate all ${questionCount} questions now.
 
       if (isTooLong) {
         return Response.json(
-          { error: "⚠️ Your syllabus is too long! Please paste only the key topics — keep it under 2000 characters for best results." },
+          {
+            error: mode === "paper"
+              ? "⚠️ Your question paper is too large to generate at once. Try reducing the number of questions per section."
+              : "⚠️ Your syllabus is too long! Please paste only the key topics — keep it under 2000 characters for best results."
+          },
           { status: 400 }
         );
       }
