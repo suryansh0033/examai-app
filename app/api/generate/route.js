@@ -188,7 +188,9 @@ Generate all ${questionCount} questions now.`;
         model: "llama-3.1-8b-instant",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.85,
-        max_tokens: mode === "paper" ? 8000 : 4000,
+        max_tokens: mode === "paper"
+  ? Math.min(sections.reduce((sum, sec) => sum + Number(sec.count), 0) * 250 + 500, 4000)
+  : 4000,
       });
 
       let rawText = completion.choices[0].message.content;
@@ -280,12 +282,12 @@ Generate all ${questionCount} questions now.`;
       }
 
       const isTooLong =
-        error?.status === 413 ||
-        error?.message?.toLowerCase().includes("context") ||
-        error?.message?.toLowerCase().includes("too long") ||
-        error?.message?.toLowerCase().includes("token") ||
-        JSON.stringify(error).toLowerCase().includes("context_length") ||
-        JSON.stringify(error).toLowerCase().includes("request_too_large");
+  error?.status === 413 ||
+  error?.message?.toLowerCase().includes("too long") ||
+  error?.message?.toLowerCase().includes("context_length") ||
+  error?.message?.toLowerCase().includes("request_too_large") ||
+  JSON.stringify(error).toLowerCase().includes("context_length") ||
+  JSON.stringify(error).toLowerCase().includes("request_too_large");
 
       if (isTooLong) {
         return Response.json(
