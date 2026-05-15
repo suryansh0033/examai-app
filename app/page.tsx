@@ -220,7 +220,7 @@ export default function Home() {
           rows={8}
           placeholder="Paste your syllabus here… e.g. Unit 1: Thermodynamics, Unit 2: Fluid Mechanics…"
           value={syllabus}
-          onChange={(e) => setSyllabus(e.target.value)}
+          onChange={(e) => { setSyllabus(e.target.value); setError(""); }}
         />
         <p className={`text-right text-xs mt-1 ${syllabus.length > 2000 ? "text-red-400" : "text-gray-500"}`}>
           {syllabus.length} / 2000 characters
