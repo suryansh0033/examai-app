@@ -105,7 +105,7 @@ Generate all ${totalQuestions} objects now.`;
         : "Mix of easy (30%), medium (40%), and hard (30%) questions. Cover everything in depth.";
 
     const formatInstructions = {
-      "Mixed": "Generate a smart mix of MCQs, short answer, and descriptive questions based on the topic type. Never ask the student to draw or sketch anything. Never ask the same concept twice in different wording.",
+      "Mixed": "Generate a smart mix of MCQs, short answer, and descriptive questions based on the topic type. For every MCQ you generate, you MUST include exactly 4 options labeled A) B) C) D) on separate lines — a MCQ without options is INVALID. Never ask the student to draw or sketch anything. Never ask the same concept twice in different wording.",
       "MCQs only": `ALL ${questionCount} questions MUST be MCQs. This is NON-NEGOTIABLE and overrides everything else including subject type.
 Every single question must have exactly 4 options on separate lines labeled A) B) C) D).
 Format EVERY question exactly like this example:

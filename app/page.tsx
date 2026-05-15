@@ -16,7 +16,6 @@ type Section = {
 
 import { useState, useEffect, useRef } from "react";
 
-// ── Cycling messages shown during loading ──
 const LOADING_MESSAGES = [
   "Analyzing your syllabus...",
   "Identifying important topics...",
@@ -49,12 +48,10 @@ export default function Home() {
   ]);
   const [nextId, setNextId] = useState(2);
 
-  // Refs so we can clear timers/abort from anywhere without stale closures
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  // ── Cycle loading message every 2s while loading ──
   useEffect(() => {
     if (loading) {
       setLoadingMsgIndex(0);
@@ -72,12 +69,11 @@ export default function Home() {
     };
   }, [loading]);
 
-  // ── Stop everything: clears timers, aborts fetch, re-enables button ──
   function stopWithError(msg: string) {
     if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
     if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
     if (abortRef.current) { abortRef.current.abort(); abortRef.current = null; }
-    setLoading(false);  // ← this re-enables the Generate button immediately
+    setLoading(false);
     setError(msg);
   }
 
@@ -118,7 +114,6 @@ export default function Home() {
       return;
     }
 
-    // ── Wire up AbortController for the 15s timeout ──
     const controller = new AbortController();
     abortRef.current = controller;
 
@@ -136,10 +131,9 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
-        signal: controller.signal,  // ← aborted after 15s
+        signal: controller.signal,
       });
 
-      // Got a response in time — clear the timeout
       if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
 
       const data = await response.json();
@@ -158,7 +152,6 @@ export default function Home() {
         return;
       }
 
-      // ── Success ──
       setLoading(false);
       if (mode === "paper") {
         setPaperText(data.paperText || "");
@@ -166,8 +159,6 @@ export default function Home() {
         setQuestions(data.questions);
       }
     } catch (err: any) {
-      // AbortError is thrown when our timeout calls controller.abort().
-      // stopWithError already ran in that case, so don't double-set the error.
       if (err?.name !== "AbortError") {
         stopWithError("Network error. Please check your connection and try again.");
       }
@@ -200,15 +191,16 @@ export default function Home() {
           ⭐ Important Questions
         </button>
         <div className="flex-1 relative">
-  <button
-    disabled
-    className="w-full py-3 rounded-xl font-bold text-sm border bg-transparent text-gray-600 border-white/10 cursor-not-allowed">
-    📄 Question Paper
-  </button>
-  <span className="absolute -top-2 -right-2 bg-amber-400 text-black text-xs font-black px-2 py-0.5 rounded-full">
-    Soon
-  </span>
-</div>
+          <button
+            disabled
+            className="w-full py-3 rounded-xl font-bold text-sm border bg-transparent text-gray-600 border-white/10 cursor-not-allowed"
+          >
+            📄 Question Paper
+          </button>
+          <span className="absolute -top-2 -right-2 bg-amber-400 text-black text-xs font-black px-2 py-0.5 rounded-full">
+            Soon
+          </span>
+        </div>
       </div>
 
       {/* ── Input Card ── */}
@@ -258,117 +250,16 @@ export default function Home() {
           </>
         )}
 
-        {/* ── QUESTION PAPER BUILDER ── */}
-        {mode === "paper" && (
-          <div className="mt-5">
-            <div className="flex items-center justify-between mb-3">
-              <label className="text-sm font-semibold text-gray-300">Paper Sections</label>
-              <span className="text-xs text-amber-400 font-bold bg-amber-400/10 px-3 py-1 rounded-full">
-                Total: {totalMarks} Marks
-              </span>
-            </div>
-
-            <div className="flex flex-col gap-3">
-              {sections.map((sec, i) => {
-                const sectionLabel = String.fromCharCode(65 + i);
-                const marksOptions = MARKS_OPTIONS[sec.type];
-                return (
-                  <div key={sec.id} className="bg-[#0f0f0f] border border-white/10 rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-md">
-                        SECTION {sectionLabel}
-                      </span>
-                      {sections.length > 1 && (
-                        <button
-                          onClick={() => removeSection(sec.id)}
-                          className="text-xs text-red-400 hover:text-red-300 transition"
-                        >
-                          ✕ Remove
-                        </button>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">Type</p>
-                        <select
-                          className="w-full bg-[#1a1a1a] text-white border border-white/10 rounded-lg p-2 text-xs focus:outline-none focus:ring-1 focus:ring-amber-400 transition"
-                          value={sec.type}
-                          onChange={(e) => updateSection(sec.id, "type", e.target.value)}
-                        >
-                          <option value="MCQ">MCQ</option>
-                          <option value="Short Answer">Short Answer</option>
-                          <option value="Long Answer">Long Answer</option>
-                          <option value="Numerical">Numerical</option>
-                          <option value="Coding">Coding</option>
-                        </select>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">Questions</p>
-                        <input
-                          type="number"
-                          min={1}
-                          max={30}
-                          className="w-full bg-[#1a1a1a] text-white border border-white/10 rounded-lg p-2 text-xs focus:outline-none focus:ring-1 focus:ring-amber-400 transition"
-                          value={sec.count}
-                          onChange={(e) => updateSection(sec.id, "count", e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">Marks each</p>
-                        <select
-                          className="w-full bg-[#1a1a1a] text-white border border-white/10 rounded-lg p-2 text-xs focus:outline-none focus:ring-1 focus:ring-amber-400 transition"
-                          value={sec.marks}
-                          onChange={(e) => updateSection(sec.id, "marks", e.target.value)}
-                        >
-                          {marksOptions.map((m) => (
-                            <option key={m} value={m}>{m}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                    <p className="text-right text-xs text-gray-600 mt-2">
-                      {sec.count} × {sec.marks} = <span className="text-gray-400">{sec.count * sec.marks} marks</span>
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-
-            <button
-              onClick={addSection}
-              disabled={sections.length >= 6}
-              className="mt-3 w-full py-2.5 rounded-xl border border-dashed border-white/20 text-gray-400 text-sm hover:border-amber-400/50 hover:text-amber-400 disabled:opacity-30 disabled:cursor-not-allowed transition"
-            >
-              + Add Section
-            </button>
-
-            <div className="mt-4 flex justify-between items-center bg-amber-400/5 border border-amber-400/20 rounded-xl px-4 py-3">
-              <span className="text-sm text-gray-300">Total Marks</span>
-              <span className="text-xl font-black text-amber-400">{totalMarks}</span>
-            </div>
-
-            {sections.reduce((s, sec) => s + sec.count, 0) > 20 && (
-              <p className="mt-3 text-xs text-amber-400 text-center">
-                ⚠️ Large papers may generate slowly. Keep total questions under 20 for best results.
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* ── Generate Button — re-enabled automatically on error/timeout ── */}
+        {/* ── Generate Button ── */}
         <button
           onClick={handleGenerate}
           disabled={loading || syllabus.trim() === "" || syllabus.length > 2000}
           className="mt-6 w-full bg-amber-400 hover:bg-amber-300 disabled:bg-amber-400/30 disabled:cursor-not-allowed text-black font-bold py-4 rounded-xl text-base transition-all duration-200 active:scale-95"
         >
-          {loading
-            ? "Generating…"
-            : mode === "paper"
-            ? "Generate Question Paper"
-            : "Generate Exam Questions"}
+          {loading ? "Generating…" : "Generate Exam Questions"}
         </button>
 
-        {/* Error message */}
+        {/* ── Error message ── */}
         {error && (
           <p className={`mt-4 text-sm text-center font-medium ${
             error.startsWith("⚡") ? "text-amber-400" : "text-red-400"
@@ -378,18 +269,14 @@ export default function Home() {
         )}
       </div>
 
-      {/* ── Loading State — spinner + cycling messages + progress dots ── */}
+      {/* ── Loading State ── */}
       {loading && (
         <div className="max-w-xl mx-auto mt-10">
           <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl px-6 py-8 flex flex-col items-center gap-5">
-
-            {/* Double-ring spinner */}
             <div className="relative w-14 h-14">
               <div className="absolute inset-0 rounded-full border-4 border-white/10" />
               <div className="absolute inset-0 rounded-full border-4 border-amber-400 border-t-transparent animate-spin" />
             </div>
-
-            {/* Cycling message — key change causes re-render = natural fade via animate-pulse */}
             <div className="text-center">
               <p
                 key={loadingMsgIndex}
@@ -399,8 +286,6 @@ export default function Home() {
               </p>
               <p className="text-gray-600 text-xs mt-2">This usually takes 5–10 seconds</p>
             </div>
-
-            {/* Step dots — amber dot tracks current message */}
             <div className="flex gap-2">
               {LOADING_MESSAGES.map((_, i) => (
                 <div
@@ -430,7 +315,7 @@ export default function Home() {
               <div key={index} className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-5 shadow-md">
                 <p className="text-sm font-bold text-amber-400 mb-1">Q{index + 1}.</p>
                 <p className="text-white text-sm font-medium leading-relaxed whitespace-pre-line">
-                  {item.question}
+                  {item.question.replace(/\\n/g, "\n")}
                 </p>
               </div>
             ))}
@@ -441,35 +326,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* ── QUESTION PAPER OUTPUT ── */}
-      {paperText && mode === "paper" && (
-        <div className="max-w-xl mx-auto mt-10">
-          <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 text-center mb-6">
-            <h2 className="text-2xl font-black text-amber-400 tracking-wide">QUESTION PAPER</h2>
-            <p className="text-gray-400 text-sm mt-1">
-              Total Marks: <span className="text-white font-bold">{totalMarks}</span>
-              &nbsp;·&nbsp;
-              Total Questions:{" "}
-              <span className="text-white font-bold">{sections.reduce((s, sec) => s + sec.count, 0)}</span>
-            </p>
-            <div className="border-t border-white/10 mt-4 pt-4 flex flex-wrap justify-center gap-4 text-xs text-gray-500">
-              {sections.map((sec, i) => (
-                <span key={sec.id}>
-                  Section {String.fromCharCode(65 + i)}: {sec.count} × {sec.type} ({sec.count * sec.marks} marks)
-                </span>
-              ))}
-            </div>
-          </div>
-          <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 shadow-md">
-            <pre className="text-white text-sm font-sans leading-relaxed whitespace-pre-wrap">
-              {paperText}
-            </pre>
-          </div>
-          <p className="text-center text-gray-600 text-xs mt-6 mb-4">
-            Generated by CramAI · Good luck on your exam! 🍀
-          </p>
-        </div>
-      )}
     </main>
   );
 }
