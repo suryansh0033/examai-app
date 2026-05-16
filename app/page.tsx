@@ -171,10 +171,10 @@ export default function Home() {
     <main className="min-h-screen bg-[#0f0f0f] text-white px-4 py-10 font-sans">
 
       {/* ── Header ── */}
-<div className="text-center mb-10">
-  <h1 className="text-5xl font-black tracking-tight text-amber-400">CramAI</h1>
-  <p className="text-gray-400 mt-2 text-sm max-w-md mx-auto">
-          Built for college students — Paste your syllabus, get the most important exam questions instantly. 
+      <div className="text-center mb-10">
+        <h1 className="text-5xl font-black tracking-tight text-amber-400">CramAI</h1>
+        <p className="text-gray-400 mt-2 text-sm max-w-md mx-auto">
+          Built for college students — Paste your syllabus, get the most important exam questions instantly.
         </p>
       </div>
 
@@ -231,7 +231,6 @@ export default function Home() {
               <option value="2">2 Hours — Key topics covered</option>
               <option value="4">4 Hours — Broad coverage</option>
               <option value="6">6 Hours — Detailed preparation</option>
-              
             </select>
 
             <label className="block text-sm font-semibold text-gray-300 mt-5 mb-2">Exam Type</label>
@@ -324,6 +323,16 @@ export default function Home() {
           </p>
         </div>
       )}
+
+      {/* ── Feedback Button ── */}
+      <div className="text-center mt-10 mb-6">
+        <a
+          href="mailto:exam.cramai@gmail.com?subject=CramAI Feedback"
+          className="text-gray-600 hover:text-gray-400 text-xs transition-colors duration-200"
+        >
+          💬 Send Feedback
+        </a>
+      </div>
 
     </main>
   );
