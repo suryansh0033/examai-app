@@ -231,7 +231,7 @@ export default function Home() {
               <option value="2">2 Hours — Key topics covered</option>
               <option value="4">4 Hours — Broad coverage</option>
               <option value="6">6 Hours — Detailed preparation</option>
-              <option value="8">8 Hours — Full exam prep</option>
+              
             </select>
 
             <label className="block text-sm font-semibold text-gray-300 mt-5 mb-2">Exam Type</label>
