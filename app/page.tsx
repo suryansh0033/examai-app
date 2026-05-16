@@ -175,7 +175,7 @@ export default function Home() {
   <img
     src="/logo.png"
     alt="CramAI Logo"
-    className="mx-auto mb-4 h-20 w-auto"
+    className="block mx-auto mb-4 h-20 w-auto"
   />
         <p className="text-gray-400 mt-2 text-sm max-w-md mx-auto">
           Built for college students — paste your syllabus, get the most important exam questions instantly. Stop studying everything, study what matters.
