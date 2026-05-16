@@ -174,7 +174,7 @@ export default function Home() {
 <div className="text-center mb-10">
   <h1 className="text-5xl font-black tracking-tight text-amber-400">CramAI</h1>
   <p className="text-gray-400 mt-2 text-sm max-w-md mx-auto">
-          Built for college students — paste your syllabus, get the most important exam questions instantly. Stop studying everything, study what matters.
+          Built for college students — Paste your syllabus, get the most important exam questions instantly. 
         </p>
       </div>
 
